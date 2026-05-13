@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using EventosAPI.Data;
 using EventosAPI.Models;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Hosting;
 
 namespace EventosAPI.Controllers
 {
@@ -12,10 +13,12 @@ namespace EventosAPI.Controllers
     public class EventosController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public EventosController(ApplicationDbContext context)
+        public EventosController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         // GET: api/Eventos (público)
@@ -107,7 +110,7 @@ namespace EventosAPI.Controllers
         // POST: api/Eventos (solo Admin)
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> CreateEvento([FromBody] CreateEventoRequest request)
+        public async Task<IActionResult> CreateEvento([FromForm] CreateEventoRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -120,9 +123,30 @@ namespace EventosAPI.Controllers
                 Lugar = request.Lugar,
                 Capacidad = request.Capacidad,
                 Precio = request.Precio,
-                ImagenUrl = request.ImagenUrl,
-                CategoriaId = request.CategoriaId
+                CategoriaId = request.CategoriaId,
+                Activo = true
             };
+
+            // Manejo de imagen
+            if (request.Imagen != null && request.Imagen.Length > 0)
+            {
+                var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "eventos");
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(request.Imagen.FileName)}";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await request.Imagen.CopyToAsync(stream);
+                }
+
+                evento.ImagenUrl = $"/images/eventos/{uniqueFileName}";
+                Console.WriteLine($"=== IMAGEN GUARDADA ===");
+                Console.WriteLine($"URL guardada: {evento.ImagenUrl}");
+                Console.WriteLine($"Ruta física: {filePath}");
+            }
 
             _context.Eventos.Add(evento);
             await _context.SaveChangesAsync();
@@ -175,6 +199,70 @@ namespace EventosAPI.Controllers
 
             return Ok(new { message = "Evento eliminado exitosamente" });
         }
+
+        // Agrega esto al final de tu EventosController
+        [HttpGet("imagen/{nombre}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ObtenerImagen(string nombre)
+        {
+            try
+            {
+                // Buscar en la ruta correcta
+                var rutaImagen = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "eventos", nombre);
+
+                Console.WriteLine($"=== BUSCANDO IMAGEN ===");
+                Console.WriteLine($"Archivo solicitado: {nombre}");
+                Console.WriteLine($"Ruta completa: {rutaImagen}");
+                Console.WriteLine($"El archivo existe: {System.IO.File.Exists(rutaImagen)}");
+
+                if (!System.IO.File.Exists(rutaImagen))
+                {
+                    return NotFound(new { mensaje = "Imagen no encontrada", ruta = rutaImagen });
+                }
+
+                var bytes = await System.IO.File.ReadAllBytesAsync(rutaImagen);
+                var extension = Path.GetExtension(nombre).ToLower();
+
+                var contentType = extension switch
+                {
+                    ".jpg" or ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".gif" => "image/gif",
+                    ".webp" => "image/webp",
+                    _ => "image/jpeg"
+                };
+
+                return File(bytes, contentType);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // Endpoint para listar imágenes (debug)
+        [HttpGet("listar-imagenes")]
+        [AllowAnonymous]
+        public IActionResult ListarImagenes()
+        {
+            var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "eventos");
+
+            if (!Directory.Exists(rutaCarpeta))
+            {
+                return Ok(new { mensaje = "La carpeta no existe", ruta = rutaCarpeta });
+            }
+
+            var archivos = Directory.GetFiles(rutaCarpeta)
+                .Select(f => Path.GetFileName(f))
+                .ToList();
+
+            return Ok(new
+            {
+                rutaCarpeta,
+                cantidad = archivos.Count,
+                archivos = archivos
+            });
+        }
     }
 
     public class CreateEventoRequest
@@ -194,6 +282,7 @@ namespace EventosAPI.Controllers
         public decimal Precio { get; set; }
         public string? ImagenUrl { get; set; }
         public int? CategoriaId { get; set; }
+        public IFormFile? Imagen { get; set; }
     }
 
     public class UpdateEventoRequest

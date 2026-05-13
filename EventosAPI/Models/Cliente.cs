@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EventosAPI.Models
 {
@@ -21,7 +22,11 @@ namespace EventosAPI.Models
         [StringLength(15, MinimumLength = 8)]
         public string Telefono { get; set; } = string.Empty;
 
-        public string? UsuarioId { get; set; }
+        [Required]
+        public string? UsuarioId { get; set; } = string.Empty;
+
+        [ForeignKey("UsuarioId")]
+        public Usuario? Usuario { get; set; }
 
         public List<Entrada>? Entradas { get; set; }
     }
