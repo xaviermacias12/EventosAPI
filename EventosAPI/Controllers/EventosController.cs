@@ -36,6 +36,7 @@ namespace EventosAPI.Controllers
                     e.Capacidad,
                     e.Precio,
                     e.ImagenUrl,
+                    e.Activo,
                     e.CategoriaId,
                     CategoriaNombre = e.Categoria != null ? e.Categoria.Nombre : null
                 })
@@ -44,7 +45,33 @@ namespace EventosAPI.Controllers
             return Ok(eventos);
         }
 
-        // GET: api/Eventos/{id}
+        // GET: api/Eventos/admin (Admin ve todos, incluso inactivos)
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin")]
+        public async Task<IActionResult> GetEventosAdmin()
+        {
+            var eventos = await _context.Eventos
+                .Include(e => e.Categoria)
+                .OrderByDescending(e => e.Fecha)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Nombre,
+                    e.Descripcion,
+                    e.Fecha,
+                    e.Lugar,
+                    e.Capacidad,
+                    e.Precio,
+                    e.ImagenUrl,
+                    e.Activo,
+                    e.CategoriaId,
+                    CategoriaNombre = e.Categoria != null ? e.Categoria.Nombre : null
+                })
+                .ToListAsync();
+
+            return Ok(eventos);
+        }
+
         // GET: api/Eventos/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetEvento(int id)
@@ -108,6 +135,9 @@ namespace EventosAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateEvento(int id, [FromBody] UpdateEventoRequest request)
         {
+            Console.WriteLine($"=== UPDATE EVENTO {id} ===");
+            Console.WriteLine($"Activo recibido: {request.Activo}");
+
             var evento = await _context.Eventos.FindAsync(id);
             if (evento == null)
                 return NotFound(new { message = "Evento no encontrado" });
@@ -120,8 +150,13 @@ namespace EventosAPI.Controllers
             evento.Precio = request.Precio;
             evento.ImagenUrl = request.ImagenUrl;
             evento.CategoriaId = request.CategoriaId;
+            evento.Activo = request.Activo;  // ← Asegura que esté aquí
+
+            Console.WriteLine($"Activo antes de guardar: {evento.Activo}");
 
             await _context.SaveChangesAsync();
+
+            Console.WriteLine($"Evento actualizado. Nuevo Activo: {evento.Activo}");
 
             return Ok(new { message = "Evento actualizado exitosamente" });
         }
@@ -178,5 +213,6 @@ namespace EventosAPI.Controllers
         public decimal Precio { get; set; }
         public string? ImagenUrl { get; set; }
         public int? CategoriaId { get; set; }
+        public bool Activo { get; set; } = true;
     }
 }

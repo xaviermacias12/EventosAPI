@@ -49,6 +49,15 @@ namespace EventosAPI.Controllers
             });
         }
 
+        // GET: api/Clientes (Admin ve todos)
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
+        public async Task<IActionResult> GetAllClientes()
+        {
+            var clientes = await _context.Clientes.ToListAsync();
+            return Ok(clientes);
+        }
+
         // PUT: api/Clientes/perfil
         [HttpPut("perfil")]
         public async Task<IActionResult> UpdatePerfil([FromBody] UpdatePerfilRequest request)

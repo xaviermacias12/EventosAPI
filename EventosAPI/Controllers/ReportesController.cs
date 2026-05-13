@@ -62,12 +62,13 @@ namespace EventosAPI.Controllers
         }
 
         // GET: api/Reportes/ventas/pdf
+        [Authorize(Roles = "Admin")]
         [HttpGet("ventas/pdf")]
         public async Task<IActionResult> ReporteVentasPDF()
         {
+            // Usar todos los eventos (activos e inactivos) para el reporte de admin
             var eventos = await _context.Eventos
                 .Include(e => e.Entradas)
-                .Where(e => e.Activo)
                 .Select(e => new
                 {
                     e.Id,
@@ -76,13 +77,15 @@ namespace EventosAPI.Controllers
                     e.Lugar,
                     CapacidadTotal = e.Capacidad,
                     EntradasVendidas = e.Entradas!.Count(t => t.Estado != "Cancelada"),
-                    Ingresos = e.Entradas!.Where(t => t.Estado != "Cancelada").Sum(t => t.PrecioPagado)
+                    Ingresos = e.Entradas!.Where(t => t.Estado != "Cancelada").Sum(t => t.PrecioPagado),
+                    e.Activo
                 })
                 .OrderByDescending(e => e.Ingresos)
                 .ToListAsync();
 
             var totalIngresos = eventos.Sum(e => e.Ingresos);
             var totalEntradas = eventos.Sum(e => e.EntradasVendidas);
+            var eventosConVentas = eventos.Where(e => e.EntradasVendidas > 0).Count();
 
             var html = $@"
     <!DOCTYPE html>
@@ -107,16 +110,12 @@ namespace EventosAPI.Controllers
         <p>Fecha de generación: {DateTime.Now:dd/MM/yyyy HH:mm}</p>
 
         <h3>Resumen General</h3>
-        <table>
-            <tr>
-                <td style='width: 50%;'><strong>Total de ingresos:</strong></td>
-                <td><strong>${totalIngresos:N2}</strong></td>
-            </tr>
-            <tr>
-                <td><strong>Total de entradas vendidas:</strong></td>
-                <td><strong>{totalEntradas}</strong></td>
-            </tr>
-        )</table>
+        <table style='width: 50%;'>
+            <tr><td style='width: 60%;'><strong>Total de ingresos:</strong></td><td><strong>${totalIngresos:N2}</strong></td></tr>
+            <tr><td><strong>Total de entradas vendidas:</strong></td><td><strong>{totalEntradas}</strong></td></tr>
+            <tr><td><strong>Eventos con ventas:</strong></td><td><strong>{eventosConVentas}</strong></td></tr>
+            <tr><td><strong>Total de eventos:</strong></td><td><strong>{eventos.Count}</strong></td></tr>
+        </table>
 
         <h3>Detalle por Evento</h3>
         <table>
@@ -133,6 +132,8 @@ namespace EventosAPI.Controllers
 
             foreach (var e in eventos)
             {
+                var estadoTexto = e.Activo ? "Activo" : "Inactivo";
+                var estadoColor = e.Activo ? "green" : "gray";
                 html += $@"
             <tr>
                 <td>{e.Nombre}</td>
