@@ -36,7 +36,7 @@ namespace EventosAPI.Controllers
                     e.FechaCompra,
                     e.Estado,
                     e.CodigoQR,
-                    Evento = new { e.Evento!.Id, e.Evento.Nombre }
+                    Evento = e.Evento != null ? new { e.Evento.Id, e.Evento.Nombre } : null
                 })
                 .ToListAsync();
             return Ok(entradas);
@@ -68,14 +68,14 @@ namespace EventosAPI.Controllers
                     e.FechaCompra,
                     e.Estado,
                     e.CodigoQR,
-                    Evento = new
+                    Evento = e.Evento != null ? new
                     {
-                        e.Evento!.Id,
+                        e.Evento.Id,
                         e.Evento.Nombre,
                         e.Evento.Fecha,
                         e.Evento.Lugar,
                         e.Evento.ImagenUrl
-                    }
+                    } : null  // ← Permitir evento null
                 })
                 .ToListAsync();
 

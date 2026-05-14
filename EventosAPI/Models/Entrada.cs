@@ -8,8 +8,7 @@ namespace EventosAPI.Models
         [Key]
         public int Id { get; set; }
 
-        [Required]
-        public int EventoId { get; set; }
+        public int? EventoId { get; set; }
 
         [Required]
         public int ClienteId { get; set; }

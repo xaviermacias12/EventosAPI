@@ -27,7 +27,8 @@ namespace EventosAPI.Data
             modelBuilder.Entity<Entrada>()
                 .HasOne(e => e.Evento)
                 .WithMany(e => e.Entradas)
-                .HasForeignKey(e => e.EventoId);
+                .HasForeignKey(e => e.EventoId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Entrada>()
                 .HasOne(e => e.Cliente)

@@ -24,24 +24,24 @@ namespace EventosAPI.Controllers
         [HttpGet("estadisticas")]
         public async Task<IActionResult> GetEstadisticas()
         {
-            var eventos = await _context.Eventos
-                .ToListAsync();
+            var eventos = await _context.Eventos.ToListAsync();
+            var todasEntradas = await _context.Entradas.ToListAsync();
 
-            var todasEntradas = await _context.Entradas
-                .ToListAsync();
+            // Diccionario de eventos para búsqueda rápida
+            var eventosDict = eventos.ToDictionary(e => e.Id);
 
-            // Ventas por evento (sin incluir el objeto Evento completo)
-            var ventasPorEvento = new List<object>();
-            foreach (var entrada in todasEntradas)
-            {
-                var evento = eventos.FirstOrDefault(e => e.Id == entrada.EventoId);
-                var nombreEvento = evento?.Nombre ?? "Sin evento";
-                ventasPorEvento.Add(new { evento = nombreEvento, ventas = 1 });
-            }
-
-            var ventasAgrupadas = ventasPorEvento
-                .GroupBy(v => v.GetType().GetProperty("evento").GetValue(v, null))
-                .Select(g => new { evento = g.Key, ventas = g.Count() });
+            // Ventas por evento
+            var ventasPorEvento = todasEntradas
+                .GroupBy(e => e.EventoId)
+                .Select(g => new
+                {
+                    eventoId = g.Key,
+                    nombreEvento = g.Key.HasValue && eventosDict.ContainsKey(g.Key.Value)
+                        ? eventosDict[g.Key.Value].Nombre
+                        : "Evento eliminado",
+                    ventas = g.Count()
+                })
+                .Select(x => new { evento = x.nombreEvento, ventas = x.ventas });
 
             // Eventos por categoría
             var eventosPorCategoria = eventos
@@ -54,7 +54,7 @@ namespace EventosAPI.Controllers
                 totalEntradas = todasEntradas.Count,
                 totalIngresos = todasEntradas.Sum(e => e.PrecioPagado),
                 proximosEventos = eventos.Count(e => e.Fecha > DateTime.Now),
-                ventasPorEvento = ventasAgrupadas,
+                ventasPorEvento = ventasPorEvento,
                 eventosPorCategoria = eventosPorCategoria
             };
 
