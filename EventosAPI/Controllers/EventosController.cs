@@ -275,22 +275,21 @@ namespace EventosAPI.Controllers
                 if (evento == null)
                     return NotFound(new { message = "Evento no encontrado" });
 
-                // Obtener entradas pero NO eliminarlas
+                // Obtener y cancelar las entradas antes de eliminar
                 var entradas = await _context.Entradas
                     .Where(e => e.EventoId == id)
                     .ToListAsync();
 
-                // Solo marcar como canceladas, mantener el registro
-                if (entradas != null && entradas.Any())
-                {
-                    foreach (var entrada in entradas)
-                    {
-                        entrada.Estado = "Cancelada";
-                        // Desvincular el evento para evitar error de FK
-                        entrada.EventoId = null;
-                    }
-                    await _context.SaveChangesAsync();
-                }
+                        if (entradas.Any())
+                        {
+                            foreach (var entrada in entradas)
+                            {
+                                entrada.Estado = "Cancelada";  // ← CAMBIAR ESTADO
+                                entrada.EventoId = null;        // ← Desvincular evento
+                            }
+                            await _context.SaveChangesAsync();
+                            Console.WriteLine($"Se cancelaron {entradas.Count} entradas");
+                        }
 
                 // Eliminar imagen
                 if (!string.IsNullOrEmpty(evento.ImagenUrl))

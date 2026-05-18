@@ -68,6 +68,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<PdfService>();
 
 builder.Services.AddSwaggerGen(c =>
 {
