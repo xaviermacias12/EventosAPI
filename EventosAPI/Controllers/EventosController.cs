@@ -56,7 +56,19 @@ namespace EventosAPI.Controllers
             var eventos = await _context.Eventos
                 .Include(e => e.Categoria)
                 .OrderByDescending(e => e.Fecha)
-                .Select(e => new
+                .ToListAsync();
+
+            var resultado = new List<object>();
+
+            foreach (var e in eventos)
+            {
+                // Calcular entradas vendidas (no canceladas)
+                var entradasVendidas = await _context.Entradas
+                    .CountAsync(t => t.EventoId == e.Id && t.Estado != "Cancelada");
+
+                var capacidadRestante = e.Capacidad - entradasVendidas;
+
+                resultado.Add(new
                 {
                     e.Id,
                     e.Nombre,
@@ -64,15 +76,17 @@ namespace EventosAPI.Controllers
                     e.Fecha,
                     e.Lugar,
                     e.Capacidad,
+                    CapacidadRestante = capacidadRestante,
+                    EntradasVendidas = entradasVendidas,
                     e.Precio,
                     e.ImagenUrl,
                     e.Activo,
                     e.CategoriaId,
                     CategoriaNombre = e.Categoria != null ? e.Categoria.Nombre : null
-                })
-                .ToListAsync();
+                });
+            }
 
-            return Ok(eventos);
+            return Ok(resultado);
         }
 
         // GET: api/Eventos/{id}
@@ -86,6 +100,12 @@ namespace EventosAPI.Controllers
 
             if (evento == null)
                 return NotFound(new { message = "Evento no encontrado" });
+
+            // Calcular entradas vendidas (no canceladas)
+            var entradasVendidas = await _context.Entradas
+                .CountAsync(e => e.EventoId == id && e.Estado != "Cancelada");
+
+            var capacidadRestante = evento.Capacidad - entradasVendidas;
 
             // Crear un objeto anónimo para evitar ciclos de referencia
             var result = new
@@ -101,6 +121,8 @@ namespace EventosAPI.Controllers
                 evento.Activo,
                 evento.FechaCreacion,
                 evento.CategoriaId,
+                CapacidadRestante = capacidadRestante,
+                EntradasVendidas = entradasVendidas,
                 Categoria = evento.Categoria != null ? new { evento.Categoria.Id, evento.Categoria.Nombre } : null
             };
 

@@ -1,10 +1,12 @@
 ﻿using EventosAPI.Data;
 using EventosAPI.Models;
 using EventosAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace EventosAPI.Controllers
 {
@@ -85,6 +87,30 @@ namespace EventosAPI.Controllers
 
             return Ok(new { message = "Usuario registrado exitosamente" });
         }
+
+        // POST: api/Auth/cambiar-password
+        [HttpPost("cambiar-password")]
+        [Authorize]
+        public async Task<IActionResult> CambiarPassword([FromBody] CambiarPasswordRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+                return Unauthorized();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(new { message = "Usuario no encontrado" });
+
+            var result = await _userManager.ChangePasswordAsync(user, request.PasswordActual, request.PasswordNueva);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return BadRequest(new { message = "Error al cambiar contraseña", errors });
+            }
+
+            return Ok(new { message = "Contraseña actualizada correctamente" });
+        }
     }
     public class LoginRequest
     {
@@ -110,5 +136,11 @@ namespace EventosAPI.Controllers
         public string Password { get; set; } = string.Empty;
 
         public string? Telefono { get; set; }
+    }
+
+    public class CambiarPasswordRequest
+    {
+        public string PasswordActual { get; set; } = string.Empty;
+        public string PasswordNueva { get; set; } = string.Empty;
     }
 }

@@ -21,11 +21,20 @@ namespace EventosAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllEntradas()
+        public async Task<IActionResult> GetAllEntradas([FromQuery] int? eventoId = null)
         {
-            var entradas = await _context.Entradas
+            var query = _context.Entradas
                 .Include(e => e.Evento)
                 .Include(e => e.Cliente)
+                .AsQueryable();
+
+            // Filtrar por eventoId si se proporciona
+            if (eventoId.HasValue)
+            {
+                query = query.Where(e => e.EventoId == eventoId);
+            }
+
+            var entradas = await query
                 .Select(e => new
                 {
                     e.Id,
@@ -39,6 +48,7 @@ namespace EventosAPI.Controllers
                     Evento = e.Evento != null ? new { e.Evento.Id, e.Evento.Nombre } : null
                 })
                 .ToListAsync();
+
             return Ok(entradas);
         }
 
@@ -123,9 +133,19 @@ namespace EventosAPI.Controllers
             var entradasVendidas = await _context.Entradas
                 .CountAsync(e => e.EventoId == request.EventoId && e.Estado != "Cancelada");
 
-            if (entradasVendidas + request.Cantidad > evento.Capacidad)
-                return BadRequest(new { message = "No hay suficientes lugares disponibles" });
+            var disponibles = evento.Capacidad - entradasVendidas;
 
+            if (request.Cantidad > disponibles)
+            {
+                return BadRequest(new
+                {
+                    message = $"No hay suficientes lugares disponibles. Quedan {disponibles} lugares.",
+                    disponibles = disponibles,
+                    solicitadas = request.Cantidad
+                });
+            }
+
+            // Crear las entradas
             var entradas = new List<Entrada>();
             for (int i = 0; i < request.Cantidad; i++)
             {
@@ -145,9 +165,13 @@ namespace EventosAPI.Controllers
 
             await _context.SaveChangesAsync();
 
+            // ========== NUEVO: Calcular capacidad restante ==========
+            var nuevaCapacidadRestante = evento.Capacidad - entradasVendidas - request.Cantidad;
+
             return Ok(new
             {
                 message = $"Compra exitosa. {request.Cantidad} entrada(s) adquirida(s).",
+                capacidadRestante = nuevaCapacidadRestante,
                 entradas = entradas.Select(e => new
                 {
                     e.Id,
@@ -191,6 +215,45 @@ namespace EventosAPI.Controllers
                     Evento = entrada.Evento?.Nombre,
                     Cliente = entrada.Cliente?.Nombre
                 }
+            });
+        }
+
+        [HttpPost("cancelar/{id}")]
+        public async Task<IActionResult> CancelarEntrada(int id)
+        {
+            var entrada = await _context.Entradas
+                .Include(e => e.Evento)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if (entrada == null)
+                return NotFound(new { message = "Entrada no encontrada" });
+
+            if (entrada.Estado == "Cancelada")
+                return BadRequest(new { message = "La entrada ya está cancelada" });
+
+            if (entrada.Estado == "Usada")
+                return BadRequest(new { message = "No se puede cancelar una entrada ya usada" });
+
+            // Verificar horas restantes
+            var horasRestantes = (entrada.Evento.Fecha - DateTime.Now).TotalHours;
+            if (horasRestantes < 24)
+                return BadRequest(new { message = "Solo se pueden cancelar compras con 24+ horas de anticipación" });
+
+            // Cancelar entrada
+            entrada.Estado = "Cancelada";
+            await _context.SaveChangesAsync();
+
+            // ========== NUEVO: Calcular capacidad restante ==========
+            var entradasVendidas = await _context.Entradas
+                .CountAsync(e => e.EventoId == entrada.EventoId && e.Estado != "Cancelada");
+
+            var capacidadRestante = entrada.Evento.Capacidad - entradasVendidas;
+
+            return Ok(new
+            {
+                message = "Entrada cancelada exitosamente",
+                capacidadRestante = capacidadRestante,
+                entradaId = entrada.Id
             });
         }
 

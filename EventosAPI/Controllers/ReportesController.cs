@@ -23,11 +23,12 @@ namespace EventosAPI.Controllers
 
         // GET: api/Reportes/estadisticas
         [Authorize(Roles = "Admin")]
-        // GET: api/Reportes/estadisticas
         [HttpGet("estadisticas")]
         public async Task<IActionResult> GetEstadisticas()
         {
-            var eventos = await _context.Eventos.ToListAsync();
+            var eventos = await _context.Eventos
+                .Include(e => e.Categoria)
+                .ToListAsync();
 
             // Solo contar entradas CONFIRMADAS (no canceladas)
             var todasEntradas = await _context.Entradas
@@ -48,8 +49,13 @@ namespace EventosAPI.Controllers
 
             // Eventos por categoría
             var eventosPorCategoria = eventos
-                .GroupBy(e => e.CategoriaId ?? 0)
-                .Select(g => new { categoriaId = g.Key, cantidad = g.Count() });
+                .GroupBy(e => e.Categoria != null ? e.Categoria.Nombre : "Sin categoría")
+                .Select(g => new
+                {
+                    categoria = g.Key,
+                    cantidad = g.Count()
+                })
+                .ToList();
 
             var estadisticas = new
             {

@@ -66,22 +66,45 @@ namespace EventosAPI.Controllers
             if (userId == null)
                 return Unauthorized();
 
+            // Obtener el usuario de Identity
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound(new { message = "Usuario no encontrado" });
+
+            // Obtener el cliente
             var cliente = await _context.Clientes
                 .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
             if (cliente == null)
                 return NotFound(new { message = "Perfil no encontrado" });
 
-            cliente.Telefono = request.Telefono ?? cliente.Telefono;
+            // Actualizar nombre en ambas tablas
+            if (!string.IsNullOrEmpty(request.Nombre))
+            {
+                user.Nombre = request.Nombre;
+                cliente.Nombre = request.Nombre;
+            }
+
+            // Actualizar teléfono
+            if (request.Telefono != null)
+            {
+                cliente.Telefono = request.Telefono;
+            }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Perfil actualizado" });
+            return Ok(new
+            {
+                message = "Perfil actualizado",
+                nombre = user.Nombre,
+                telefono = cliente.Telefono
+            });
         }
     }
 
     public class UpdatePerfilRequest
     {
+        public string Nombre { get; set; }
         public string? Telefono { get; set; }
     }
 }
