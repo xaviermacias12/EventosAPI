@@ -221,6 +221,17 @@ namespace EventosAPI.Controllers
         [HttpPost("cancelar/{id}")]
         public async Task<IActionResult> CancelarEntrada(int id)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+                return Unauthorized(new { message = "Usuario no autenticado" });
+
+            // Obtener el cliente actual
+            var cliente = await _context.Clientes
+                .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+            if (cliente == null)
+                return NotFound(new { message = "Cliente no encontrado" });
+
             var entrada = await _context.Entradas
                 .Include(e => e.Evento)
                 .FirstOrDefaultAsync(e => e.Id == id);
