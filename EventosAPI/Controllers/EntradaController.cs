@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EventosAPI.Data;
@@ -10,7 +11,7 @@ namespace EventosAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class EntradasController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -28,7 +29,6 @@ namespace EventosAPI.Controllers
                 .Include(e => e.Cliente)
                 .AsQueryable();
 
-            // Filtrar por eventoId si se proporciona
             if (eventoId.HasValue)
             {
                 query = query.Where(e => e.EventoId == eventoId);
@@ -52,7 +52,6 @@ namespace EventosAPI.Controllers
             return Ok(entradas);
         }
 
-        // GET: api/Entradas/mis-entradas
         [HttpGet("mis-entradas")]
         public async Task<IActionResult> GetMisEntradas()
         {
@@ -85,14 +84,13 @@ namespace EventosAPI.Controllers
                         e.Evento.Fecha,
                         e.Evento.Lugar,
                         e.Evento.ImagenUrl
-                    } : null  // ← Permitir evento null
+                    } : null
                 })
                 .ToListAsync();
 
             return Ok(entradas);
         }
 
-        // POST: api/Entradas/comprar
         [HttpPost("comprar")]
         public async Task<IActionResult> ComprarEntrada([FromBody] ComprarEntradaRequest request)
         {
@@ -103,7 +101,6 @@ namespace EventosAPI.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            // Obtener o crear cliente
             var user = await _context.Users.FindAsync(userId);
             var cliente = await _context.Clientes
                 .FirstOrDefaultAsync(c => c.UsuarioId == userId);
@@ -121,7 +118,6 @@ namespace EventosAPI.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            // Verificar evento
             var evento = await _context.Eventos.FindAsync(request.EventoId);
             if (evento == null)
                 return BadRequest(new { message = "Evento no encontrado" });
@@ -129,7 +125,6 @@ namespace EventosAPI.Controllers
             if (!evento.Activo)
                 return BadRequest(new { message = "Evento no disponible" });
 
-            // Verificar disponibilidad
             var entradasVendidas = await _context.Entradas
                 .CountAsync(e => e.EventoId == request.EventoId && e.Estado != "Cancelada");
 
@@ -145,7 +140,6 @@ namespace EventosAPI.Controllers
                 });
             }
 
-            // Crear las entradas
             var entradas = new List<Entrada>();
             for (int i = 0; i < request.Cantidad; i++)
             {
@@ -165,7 +159,6 @@ namespace EventosAPI.Controllers
 
             await _context.SaveChangesAsync();
 
-            // ========== NUEVO: Calcular capacidad restante ==========
             var nuevaCapacidadRestante = evento.Capacidad - entradasVendidas - request.Cantidad;
 
             return Ok(new
@@ -183,7 +176,6 @@ namespace EventosAPI.Controllers
             });
         }
 
-        // POST: api/Entradas/validar-qr
         [Authorize(Roles = "Admin")]
         [HttpPost("validar-qr")]
         public async Task<IActionResult> ValidarQR([FromBody] ValidarQRRequest request)
@@ -225,7 +217,6 @@ namespace EventosAPI.Controllers
             if (userId == null)
                 return Unauthorized(new { message = "Usuario no autenticado" });
 
-            // Obtener el cliente actual
             var cliente = await _context.Clientes
                 .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
@@ -239,22 +230,22 @@ namespace EventosAPI.Controllers
             if (entrada == null)
                 return NotFound(new { message = "Entrada no encontrada" });
 
+            if (entrada.ClienteId != cliente.Id)
+                return Unauthorized(new { message = "No puedes cancelar una entrada de otro usuario" });
+
             if (entrada.Estado == "Cancelada")
                 return BadRequest(new { message = "La entrada ya está cancelada" });
 
             if (entrada.Estado == "Usada")
                 return BadRequest(new { message = "No se puede cancelar una entrada ya usada" });
 
-            // Verificar horas restantes
             var horasRestantes = (entrada.Evento.Fecha - DateTime.Now).TotalHours;
             if (horasRestantes < 24)
                 return BadRequest(new { message = "Solo se pueden cancelar compras con 24+ horas de anticipación" });
 
-            // Cancelar entrada
             entrada.Estado = "Cancelada";
             await _context.SaveChangesAsync();
 
-            // ========== NUEVO: Calcular capacidad restante ==========
             var entradasVendidas = await _context.Entradas
                 .CountAsync(e => e.EventoId == entrada.EventoId && e.Estado != "Cancelada");
 

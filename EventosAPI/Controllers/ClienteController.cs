@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EventosAPI.Data;
@@ -9,7 +10,7 @@ namespace EventosAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class ClientesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -19,7 +20,6 @@ namespace EventosAPI.Controllers
             _context = context;
         }
 
-        // GET: api/Clientes/perfil
         [HttpGet("perfil")]
         public async Task<IActionResult> GetPerfil()
         {
@@ -49,7 +49,6 @@ namespace EventosAPI.Controllers
             });
         }
 
-        // GET: api/Clientes (Admin ve todos)
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllClientes()
@@ -58,7 +57,6 @@ namespace EventosAPI.Controllers
             return Ok(clientes);
         }
 
-        // PUT: api/Clientes/perfil
         [HttpPut("perfil")]
         public async Task<IActionResult> UpdatePerfil([FromBody] UpdatePerfilRequest request)
         {
@@ -66,26 +64,22 @@ namespace EventosAPI.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            // Obtener el usuario de Identity
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
                 return NotFound(new { message = "Usuario no encontrado" });
 
-            // Obtener el cliente
             var cliente = await _context.Clientes
                 .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
             if (cliente == null)
                 return NotFound(new { message = "Perfil no encontrado" });
 
-            // Actualizar nombre en ambas tablas
             if (!string.IsNullOrEmpty(request.Nombre))
             {
                 user.Nombre = request.Nombre;
                 cliente.Nombre = request.Nombre;
             }
 
-            // Actualizar teléfono
             if (request.Telefono != null)
             {
                 cliente.Telefono = request.Telefono;
@@ -104,7 +98,7 @@ namespace EventosAPI.Controllers
 
     public class UpdatePerfilRequest
     {
-        public string Nombre { get; set; }
+        public string? Nombre { get; set; }
         public string? Telefono { get; set; }
     }
 }

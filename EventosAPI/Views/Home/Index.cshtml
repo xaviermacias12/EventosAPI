@@ -1,8 +1,59 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Bienvenido";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container py-5">
+    <div class="row align-items-center min-vh-75">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold" style="color: #1e293b;">
+                <i class="bi bi-ticket-perforated me-2"></i>
+                EventosApp
+            </h1>
+            <p class="lead text-muted mt-3">
+                La plataforma líder para descubrir y comprar entradas para los mejores eventos.
+            </p>
+            <div class="mt-4">
+                <a href="/AuthWeb/Register" class="btn btn-dark btn-lg rounded-3 me-3">
+                    <i class="bi bi-person-plus me-2"></i> Registrarse
+                </a>
+                <a href="/AuthWeb/Login" class="btn btn-outline-dark btn-lg rounded-3">
+                    <i class="bi bi-box-arrow-in-right me-2"></i> Iniciar Sesión
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-6 text-center mt-4 mt-lg-0">
+            <i class="bi bi-calendar-event" style="font-size: 200px; color: #1e293b; opacity: 0.1;"></i>
+        </div>
+    </div>
+
+    <div class="row mt-5 pt-5 text-center">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <i class="bi bi-search fs-1 text-dark"></i>
+                <h5 class="mt-3">Descubre</h5>
+                <p class="text-muted">Explora los mejores eventos cerca de ti</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <i class="bi bi-ticket-perforated fs-1 text-dark"></i>
+                <h5 class="mt-3">Reserva</h5>
+                <p class="text-muted">Aparta tus entradas fácilmente</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <i class="bi bi-qr-code fs-1 text-dark"></i>
+                <h5 class="mt-3">Accede</h5>
+                <p class="text-muted">Usa tu código QR en la entrada</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    .min-vh-75 {
+        min-height: 60vh;
+    }
+</style>

@@ -74,7 +74,6 @@ namespace EventosAPI.Controllers
 
             await _userManager.AddToRoleAsync(user, "Cliente");
 
-            // Crear cliente en tabla Clientes
             var cliente = new Cliente
             {
                 Nombre = request.Nombre,
@@ -88,7 +87,6 @@ namespace EventosAPI.Controllers
             return Ok(new { message = "Usuario registrado exitosamente" });
         }
 
-        // POST: api/Auth/cambiar-password
         [HttpPost("cambiar-password")]
         [Authorize]
         public async Task<IActionResult> CambiarPassword([FromBody] CambiarPasswordRequest request)
@@ -112,6 +110,7 @@ namespace EventosAPI.Controllers
             return Ok(new { message = "Contraseña actualizada correctamente" });
         }
     }
+
     public class LoginRequest
     {
         [Required]

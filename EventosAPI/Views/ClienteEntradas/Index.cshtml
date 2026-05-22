@@ -1,0 +1,117 @@
+﻿@model IEnumerable<EventosAPI.Models.Entrada>
+@{
+    ViewData["Title"] = "Mis Entradas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold" style="color: #1e293b;">Mis Entradas</h1>
+        <p class="text-muted">Aquí puedes ver todas tus reservas</p>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model.Any())
+    {
+        <div class="row g-4">
+            @foreach (var entrada in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden @(entrada.Estado == "Cancelada" ? "opacity-75" : "")">
+                        <div class="card-header @(entrada.Estado == "Cancelada" ? "bg-secondary" : "bg-dark") text-white py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">#@entrada.Id</span>
+                                @if (entrada.Estado == "Cancelada")
+                                {
+                                    <span class="badge bg-light text-dark">CANCELADA</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">CONFIRMADA</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold">@entrada.Evento?.Nombre</h5>
+                            <div class="mt-3">
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <i class="bi bi-calendar3 text-secondary"></i>
+                                    <span>@entrada.Evento?.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <i class="bi bi-geo-alt text-secondary"></i>
+                                    <span>@entrada.Evento?.Lugar</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <i class="bi bi-chair text-secondary"></i>
+                                    <span>Asiento: <strong>@entrada.Asiento</strong></span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="bi bi-cash text-secondary"></i>
+                                    <span>Precio: <strong>$$@entrada.PrecioPagado.ToString("N0")</strong></span>
+                                </div>
+                            </div>
+
+                            @if (entrada.Estado != "Cancelada")
+                            {
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-center p-3 bg-light rounded-3">
+                                        @if (!string.IsNullOrEmpty(entrada.CodigoQR))
+                                        {
+                                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@entrada.CodigoQR" alt="QR" style="width: 120px; height: 120px;">
+                                        }
+                                        <div class="ms-3">
+                                            <small class="text-muted">Código de verificación</small>
+                                            <code class="d-block">@entrada.CodigoQR</code>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <form method="post" action="/ClienteEntradas/Cancelar/@entrada.Id" class="mt-3" onsubmit="return confirm('¿Cancelar esta entrada? Recibirás reembolso (penalización 10%)')">
+                                    <button type="submit" class="btn btn-outline-danger w-100 rounded-3">
+                                        <i class="bi bi-x-circle me-2"></i> Cancelar compra
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary text-center mt-3 mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Esta entrada ya no es válida
+                                </div>
+                            }
+                        </div>
+                        <div class="card-footer bg-transparent border-0 pb-3">
+                            <button class="btn btn-outline-secondary w-100" onclick="window.print()">
+                                <i class="bi bi-download me-2"></i> Descargar / Imprimir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-ticket-perforated fs-1 text-muted"></i>
+            <p class="text-muted mt-3">No tienes entradas registradas</p>
+            <a href="/ClienteEventos" class="btn btn-dark rounded-3">Ver eventos</a>
+        </div>
+    }
+</div>

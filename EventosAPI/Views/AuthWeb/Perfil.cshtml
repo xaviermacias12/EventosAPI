@@ -1,0 +1,69 @@
+﻿@using EventosAPI.Models
+@model Usuario
+@{
+    ViewData["Title"] = "Mi Perfil";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4" style="max-width: 600px;">
+    <div class="text-center mb-4">
+        <h1 class="display-5 fw-bold" style="color: #1e293b;">Mi Perfil</h1>
+        <p class="text-muted">Administra tu información personal</p>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body p-4">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success">@TempData["Success"]</div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger">@TempData["Error"]</div>
+            }
+
+            <form method="post" action="/AuthWeb/Perfil">
+                <div class="mb-3">
+                    <label class="form-label">Nombre completo</label>
+                    <input type="text" name="nombre" class="form-control" value="@Model.Nombre" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Correo electrónico</label>
+                    <input type="email" class="form-control" value="@Model.Email" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Teléfono</label>
+                    <input type="tel" name="telefono" class="form-control" value="@ViewBag.Telefono">
+                </div>
+                <button type="submit" class="btn btn-dark w-100 py-2 rounded-3">
+                    <i class="bi bi-save me-2"></i> Guardar cambios
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-white border-0 pt-4">
+            <h5 class="mb-0">Cambiar contraseña</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="/AuthWeb/CambiarPassword">
+                <div class="mb-3">
+                    <label class="form-label">Contraseña actual</label>
+                    <input type="password" name="passwordActual" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nueva contraseña</label>
+                    <input type="password" name="passwordNueva" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Confirmar nueva contraseña</label>
+                    <input type="password" name="passwordConfirmar" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-outline-dark w-100 py-2 rounded-3">
+                    <i class="bi bi-key me-2"></i> Actualizar contraseña
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

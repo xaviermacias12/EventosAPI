@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EventosAPI.Data;
@@ -21,7 +22,7 @@ namespace EventosAPI.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-        // GET: api/Eventos (público)
+        // PÚBLICO - No requiere autenticación
         [HttpGet]
         public async Task<IActionResult> GetEventos()
         {
@@ -48,8 +49,8 @@ namespace EventosAPI.Controllers
             return Ok(eventos);
         }
 
-        // GET: api/Eventos/admin (Admin ve todos, incluso inactivos)
-        [Authorize(Roles = "Admin")]
+        // ADMIN - Requiere JWT y rol Admin
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpGet("admin")]
         public async Task<IActionResult> GetEventosAdmin()
         {
@@ -62,7 +63,6 @@ namespace EventosAPI.Controllers
 
             foreach (var e in eventos)
             {
-                // Calcular entradas vendidas (no canceladas)
                 var entradasVendidas = await _context.Entradas
                     .CountAsync(t => t.EventoId == e.Id && t.Estado != "Cancelada");
 
@@ -89,25 +89,23 @@ namespace EventosAPI.Controllers
             return Ok(resultado);
         }
 
-        // GET: api/Eventos/{id}
+        // PÚBLICO
         [HttpGet("{id}")]
         public async Task<IActionResult> GetEvento(int id)
         {
             var evento = await _context.Eventos
                 .Include(e => e.Categoria)
-                .AsNoTracking()  // ← Agrega esto para evitar ciclos
+                .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.Id == id);
 
             if (evento == null)
                 return NotFound(new { message = "Evento no encontrado" });
 
-            // Calcular entradas vendidas (no canceladas)
             var entradasVendidas = await _context.Entradas
                 .CountAsync(e => e.EventoId == id && e.Estado != "Cancelada");
 
             var capacidadRestante = evento.Capacidad - entradasVendidas;
 
-            // Crear un objeto anónimo para evitar ciclos de referencia
             var result = new
             {
                 evento.Id,
@@ -129,8 +127,8 @@ namespace EventosAPI.Controllers
             return Ok(result);
         }
 
-        // POST: api/Eventos (solo Admin)
-        [Authorize(Roles = "Admin")]
+        // ADMIN - Requiere JWT
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateEvento([FromForm] CreateEventoRequest request)
         {
@@ -149,7 +147,6 @@ namespace EventosAPI.Controllers
                 Activo = true
             };
 
-            // Manejo de imagen
             if (request.Imagen != null && request.Imagen.Length > 0)
             {
                 var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "eventos");
@@ -165,9 +162,6 @@ namespace EventosAPI.Controllers
                 }
 
                 evento.ImagenUrl = $"/images/eventos/{uniqueFileName}";
-                Console.WriteLine($"=== IMAGEN GUARDADA ===");
-                Console.WriteLine($"URL guardada: {evento.ImagenUrl}");
-                Console.WriteLine($"Ruta física: {filePath}");
             }
 
             _context.Eventos.Add(evento);
@@ -176,20 +170,15 @@ namespace EventosAPI.Controllers
             return Ok(new { message = "Evento creado exitosamente", id = evento.Id });
         }
 
-        // PUT: api/Eventos/{id} (solo Admin)
-        [Authorize(Roles = "Admin")]
+        // ADMIN
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateEvento(int id, [FromForm] UpdateEventoRequest request)
         {
-            Console.WriteLine($"=== UPDATE EVENTO {id} ===");
-            Console.WriteLine($"Nombre: {request.Nombre}");
-            Console.WriteLine($"Activo recibido: {request.Activo}");
-
             var evento = await _context.Eventos.FindAsync(id);
             if (evento == null)
                 return NotFound(new { message = "Evento no encontrado" });
 
-            // Actualizar campos básicos
             evento.Nombre = request.Nombre;
             evento.Descripcion = request.Descripcion;
             evento.Fecha = request.Fecha;
@@ -199,10 +188,8 @@ namespace EventosAPI.Controllers
             evento.CategoriaId = request.CategoriaId;
             evento.Activo = request.Activo;
 
-            // Manejo de nueva imagen (si se sube una)
             if (request.Imagen != null && request.Imagen.Length > 0)
             {
-                // Eliminar imagen anterior si existe
                 if (!string.IsNullOrEmpty(evento.ImagenUrl))
                 {
                     var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath,
@@ -210,11 +197,9 @@ namespace EventosAPI.Controllers
                     if (System.IO.File.Exists(oldImagePath))
                     {
                         System.IO.File.Delete(oldImagePath);
-                        Console.WriteLine($"Imagen anterior eliminada: {oldImagePath}");
                     }
                 }
 
-                // Guardar nueva imagen
                 var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "eventos");
                 if (!Directory.Exists(uploadsFolder))
                     Directory.CreateDirectory(uploadsFolder);
@@ -228,18 +213,15 @@ namespace EventosAPI.Controllers
                 }
 
                 evento.ImagenUrl = $"/images/eventos/{uniqueFileName}";
-                Console.WriteLine($"Nueva imagen guardada: {evento.ImagenUrl}");
             }
 
             await _context.SaveChangesAsync();
 
-            Console.WriteLine($"Evento actualizado correctamente. Activo: {evento.Activo}");
-
             return Ok(new { message = "Evento actualizado exitosamente" });
         }
 
-        // // Soft Delete - Solo desactivar
-        [Authorize(Roles = "Admin")]
+        // ADMIN - Soft Delete
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEvento(int id)
         {
@@ -253,41 +235,9 @@ namespace EventosAPI.Controllers
             return Ok(new { message = "Evento desactivado exitosamente" });
         }
 
-        // Cancelar todas las entradas de un evento
-        [HttpPost("cancelar-todas-entradas/{eventoId}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CancelarTodasEntradas(int eventoId)
-        {
-            var evento = await _context.Eventos
-                .Include(e => e.Entradas)
-                .FirstOrDefaultAsync(e => e.Id == eventoId);
-
-            if (evento == null)
-                return NotFound(new { message = "Evento no encontrado" });
-
-            var entradasConfirmadas = evento.Entradas.Where(e => e.Estado == "Confirmada").ToList();
-
-            if (!entradasConfirmadas.Any())
-                return Ok(new { message = "No hay entradas confirmadas para cancelar", cantidad = 0 });
-
-            foreach (var entrada in entradasConfirmadas)
-            {
-                entrada.Estado = "Cancelada";
-                // entrada.FechaCancelacion = DateTime.Now; // Opcional
-            }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = $"Se cancelaron {entradasConfirmadas.Count} entradas",
-                cantidad = entradasConfirmadas.Count
-            });
-        }
-
-        // Hard Delete - Elimina evento pero conserva entradas (solo las marca como canceladas)
+        // ADMIN - Hard Delete
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
         [HttpDelete("permanente/{id}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EliminarPermanentemente(int id)
         {
             try
@@ -297,23 +247,20 @@ namespace EventosAPI.Controllers
                 if (evento == null)
                     return NotFound(new { message = "Evento no encontrado" });
 
-                // Obtener y cancelar las entradas antes de eliminar
                 var entradas = await _context.Entradas
                     .Where(e => e.EventoId == id)
                     .ToListAsync();
 
-                        if (entradas.Any())
-                        {
-                            foreach (var entrada in entradas)
-                            {
-                                entrada.Estado = "Cancelada";  // ← CAMBIAR ESTADO
-                                entrada.EventoId = null;        // ← Desvincular evento
-                            }
-                            await _context.SaveChangesAsync();
-                            Console.WriteLine($"Se cancelaron {entradas.Count} entradas");
-                        }
+                if (entradas.Any())
+                {
+                    foreach (var entrada in entradas)
+                    {
+                        entrada.Estado = "Cancelada";
+                        entrada.EventoId = null;
+                    }
+                    await _context.SaveChangesAsync();
+                }
 
-                // Eliminar imagen
                 if (!string.IsNullOrEmpty(evento.ImagenUrl))
                 {
                     var imagePath = Path.Combine(_webHostEnvironment.WebRootPath,
@@ -322,7 +269,6 @@ namespace EventosAPI.Controllers
                         System.IO.File.Delete(imagePath);
                 }
 
-                // Eliminar evento
                 _context.Eventos.Remove(evento);
                 await _context.SaveChangesAsync();
 
@@ -338,20 +284,14 @@ namespace EventosAPI.Controllers
             }
         }
 
-        // Agrega esto al final de tu EventosController
+        // PÚBLICO - Servir imágenes
         [HttpGet("imagen/{nombre}")]
         [AllowAnonymous]
         public async Task<IActionResult> ObtenerImagen(string nombre)
         {
             try
             {
-                // Buscar en la ruta correcta
                 var rutaImagen = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "eventos", nombre);
-
-                Console.WriteLine($"=== BUSCANDO IMAGEN ===");
-                Console.WriteLine($"Archivo solicitado: {nombre}");
-                Console.WriteLine($"Ruta completa: {rutaImagen}");
-                Console.WriteLine($"El archivo existe: {System.IO.File.Exists(rutaImagen)}");
 
                 if (!System.IO.File.Exists(rutaImagen))
                 {
@@ -376,30 +316,6 @@ namespace EventosAPI.Controllers
             {
                 return BadRequest(new { error = ex.Message });
             }
-        }
-
-        // Endpoint para listar imágenes (debug)
-        [HttpGet("listar-imagenes")]
-        [AllowAnonymous]
-        public IActionResult ListarImagenes()
-        {
-            var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "eventos");
-
-            if (!Directory.Exists(rutaCarpeta))
-            {
-                return Ok(new { mensaje = "La carpeta no existe", ruta = rutaCarpeta });
-            }
-
-            var archivos = Directory.GetFiles(rutaCarpeta)
-                .Select(f => Path.GetFileName(f))
-                .ToList();
-
-            return Ok(new
-            {
-                rutaCarpeta,
-                cantidad = archivos.Count,
-                archivos = archivos
-            });
         }
     }
 

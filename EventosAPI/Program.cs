@@ -4,7 +4,6 @@ using EventosAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
@@ -23,11 +22,11 @@ builder.Services.AddCors(options =>
         });
 });
 
-// DbContext
+// ========== DbContext ==========
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity
+// ========== IDENTITY (esto ya configura cookies automáticamente) ==========
 builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
 {
     options.Password.RequireDigit = false;
@@ -35,20 +34,35 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
     options.Password.RequireLowercase = false;
+    options.User.RequireUniqueEmail = true;
+    options.SignIn.RequireConfirmedAccount = false;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// JWT
+// ========== CONFIGURACIÓN DE COOKIES PARA VISTAS WEB ==========
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/AuthWeb/Login";
+    options.LogoutPath = "/AuthWeb/Logout";
+    options.AccessDeniedPath = "/Home/AccessDenied";
+    options.Cookie.HttpOnly = true;
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    options.SlidingExpiration = true;
+    options.Cookie.Name = "EventosAppCookie";
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
+
+// ========== MVC PARA VISTAS ==========
+builder.Services.AddControllersWithViews();
+
+// ========== JWT ==========
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new Exception("JWT Key no configurada");
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
+// ========== AGREGAR JWT COMO ESQUEMA ADICIONAL (sin duplicar Identity.Application) ==========
+builder.Services.AddAuthentication()
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.RequireHttpsMetadata = false;
     options.SaveToken = true;
@@ -65,11 +79,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// ========== SERVICIOS ==========
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<PdfService>();
 
+// ========== SWAGGER ==========
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "EventosAPI", Version = "v1" });
@@ -84,11 +100,10 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 var app = builder.Build();
 
+// ========== PIPELINE ==========
 app.UseStaticFiles();
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -101,11 +116,18 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
 
-// Seed data (solo roles y admin)
+// ========== RUTAS ==========
+app.MapControllers(); // API
+app.MapControllerRoute( // Vistas MVC
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// ========== SEED DATA ==========
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();

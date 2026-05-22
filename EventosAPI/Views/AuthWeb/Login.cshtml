@@ -1,0 +1,41 @@
+﻿@{
+    ViewData["Title"] = "Iniciar Sesión";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 70vh;">
+    <div class="card shadow-lg border-0 rounded-4" style="width: 400px;">
+        <div class="card-header bg-dark text-white text-center py-4 rounded-top-4">
+            <i class="bi bi-box-arrow-in-right fs-1"></i>
+            <h4 class="mb-0 mt-2">Iniciar Sesión</h4>
+        </div>
+        <div class="card-body p-4">
+            @if (!string.IsNullOrEmpty(ViewBag.Error))
+            {
+                <div class="alert alert-danger">@ViewBag.Error</div>
+            }
+
+            <form method="post" action="/AuthWeb/Login">
+                <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+                <div class="mb-3">
+                    <label class="form-label">Correo electrónico</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-dark w-100 py-2 rounded-3">Ingresar</button>
+            </form>
+            <div class="text-center mt-3">
+                <small>¿No tienes cuenta? <a href="/AuthWeb/Register" class="text-decoration-none">Regístrate aquí</a></small>
+            </div>
+        </div>
+    </div>
+</div>

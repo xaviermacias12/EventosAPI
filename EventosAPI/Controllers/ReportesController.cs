@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EventosAPI.Data;
@@ -9,7 +10,7 @@ namespace EventosAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
     public class ReportesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,8 +22,6 @@ namespace EventosAPI.Controllers
             _pdfService = pdfService;
         }
 
-        // GET: api/Reportes/estadisticas
-        [Authorize(Roles = "Admin")]
         [HttpGet("estadisticas")]
         public async Task<IActionResult> GetEstadisticas()
         {
@@ -30,12 +29,10 @@ namespace EventosAPI.Controllers
                 .Include(e => e.Categoria)
                 .ToListAsync();
 
-            // Solo contar entradas CONFIRMADAS (no canceladas)
             var todasEntradas = await _context.Entradas
-                .Where(e => e.Estado == "Confirmada")  // ← Filtrar solo confirmadas
+                .Where(e => e.Estado == "Confirmada")
                 .ToListAsync();
 
-            // Ventas por evento (solo entradas confirmadas con evento existente)
             var ventasPorEvento = todasEntradas
                 .Where(e => e.EventoId.HasValue)
                 .GroupBy(e => e.EventoId)
@@ -47,7 +44,6 @@ namespace EventosAPI.Controllers
                 })
                 .Select(x => new { evento = x.nombreEvento, ventas = x.ventas });
 
-            // Eventos por categoría
             var eventosPorCategoria = eventos
                 .GroupBy(e => e.Categoria != null ? e.Categoria.Nombre : "Sin categoría")
                 .Select(g => new
@@ -70,8 +66,6 @@ namespace EventosAPI.Controllers
             return Ok(estadisticas);
         }
 
-        // GET: api/Reportes/ventas/pdf
-        [Authorize(Roles = "Admin")]
         [HttpGet("ventas/pdf")]
         public async Task<IActionResult> ReporteVentasPDF()
         {
@@ -103,7 +97,6 @@ namespace EventosAPI.Controllers
             return File(pdfBytes, "application/pdf", $"reporte_ventas_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
         }
 
-        // GET: api/Reportes/entrada/{id}/ticket
         [HttpGet("entrada/{id}/ticket")]
         [AllowAnonymous]
         public async Task<IActionResult> TicketEntrada(int id)
