@@ -132,7 +132,21 @@ namespace EventosAPI.Controllers
 
             if (cliente != null)
             {
+                cliente.Nombre = nombre;
                 cliente.Telefono = telefono ?? "";
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // Si no existe cliente, crearlo
+                cliente = new Cliente
+                {
+                    Nombre = nombre,
+                    Email = user.Email,
+                    Telefono = telefono ?? "",
+                    UsuarioId = user.Id
+                };
+                _context.Clientes.Add(cliente);
                 await _context.SaveChangesAsync();
             }
 

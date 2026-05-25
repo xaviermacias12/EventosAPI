@@ -11,29 +11,52 @@
         <p class="text-muted">Administra tu información personal</p>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-body p-4">
-            @if (TempData["Success"] != null)
-            {
-                <div class="alert alert-success">@TempData["Success"]</div>
-            }
-            @if (TempData["Error"] != null)
-            {
-                <div class="alert alert-danger">@TempData["Error"]</div>
-            }
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Datos personales -->
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-header bg-white border-0 pt-4">
+            <h5 class="mb-0">
+                <i class="bi bi-person me-2"></i> Datos personales
+            </h5>
+        </div>
+        <div class="card-body">
             <form method="post" action="/AuthWeb/Perfil">
                 <div class="mb-3">
                     <label class="form-label">Nombre completo</label>
-                    <input type="text" name="nombre" class="form-control" value="@Model.Nombre" required>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                        <input type="text" name="nombre" class="form-control" value="@Model.Nombre" required>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Correo electrónico</label>
-                    <input type="email" class="form-control" value="@Model.Email" disabled>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                        <input type="email" class="form-control" value="@Model.Email" disabled>
+                    </div>
+                    <small class="text-muted">El correo no se puede modificar</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Teléfono</label>
-                    <input type="tel" name="telefono" class="form-control" value="@ViewBag.Telefono">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-phone"></i></span>
+                        <input type="tel" name="telefono" class="form-control" value="@ViewBag.Telefono">
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-dark w-100 py-2 rounded-3">
                     <i class="bi bi-save me-2"></i> Guardar cambios
@@ -42,26 +65,38 @@
         </div>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-4 mt-4">
+    <!-- Cambiar contraseña -->
+    <div class="card shadow-sm border-0 rounded-4">
         <div class="card-header bg-white border-0 pt-4">
-            <h5 class="mb-0">Cambiar contraseña</h5>
+            <h5 class="mb-0">
+                <i class="bi bi-key me-2"></i> Cambiar contraseña
+            </h5>
         </div>
         <div class="card-body">
             <form method="post" action="/AuthWeb/CambiarPassword">
                 <div class="mb-3">
                     <label class="form-label">Contraseña actual</label>
-                    <input type="password" name="passwordActual" class="form-control" required>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                        <input type="password" name="passwordActual" class="form-control" required>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Nueva contraseña</label>
-                    <input type="password" name="passwordNueva" class="form-control" required>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
+                        <input type="password" name="passwordNueva" class="form-control" required>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Confirmar nueva contraseña</label>
-                    <input type="password" name="passwordConfirmar" class="form-control" required>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-check-circle"></i></span>
+                        <input type="password" name="passwordConfirmar" class="form-control" required>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-outline-dark w-100 py-2 rounded-3">
-                    <i class="bi bi-key me-2"></i> Actualizar contraseña
+                    <i class="bi bi-arrow-repeat me-2"></i> Actualizar contraseña
                 </button>
             </form>
         </div>

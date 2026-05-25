@@ -26,92 +26,236 @@
         </div>
     }
 
-    @if (Model.Any())
-    {
-        <div class="row g-4">
-            @foreach (var entrada in Model)
-            {
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden @(entrada.Estado == "Cancelada" ? "opacity-75" : "")">
-                        <div class="card-header @(entrada.Estado == "Cancelada" ? "bg-secondary" : "bg-dark") text-white py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-bold">#@entrada.Id</span>
-                                @if (entrada.Estado == "Cancelada")
-                                {
-                                    <span class="badge bg-light text-dark">CANCELADA</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success">CONFIRMADA</span>
-                                }
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <h5 class="card-title fw-bold">@entrada.Evento?.Nombre</h5>
-                            <div class="mt-3">
-                                <div class="d-flex align-items-center gap-3 mb-2">
-                                    <i class="bi bi-calendar3 text-secondary"></i>
-                                    <span>@entrada.Evento?.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
-                                </div>
-                                <div class="d-flex align-items-center gap-3 mb-2">
-                                    <i class="bi bi-geo-alt text-secondary"></i>
-                                    <span>@entrada.Evento?.Lugar</span>
-                                </div>
-                                <div class="d-flex align-items-center gap-3 mb-2">
-                                    <i class="bi bi-chair text-secondary"></i>
-                                    <span>Asiento: <strong>@entrada.Asiento</strong></span>
-                                </div>
-                                <div class="d-flex align-items-center gap-3">
-                                    <i class="bi bi-cash text-secondary"></i>
-                                    <span>Precio: <strong>$$@entrada.PrecioPagado.ToString("N0")</strong></span>
-                                </div>
-                            </div>
+    <!-- Filtros -->
+    <div class="d-flex gap-3 mb-4 justify-content-center">
+        <button class="btn btn-filter px-4 py-2 rounded-pill @(ViewBag.Filtro == "todas" ? "btn-dark active" : "btn-outline-secondary")" data-filtro="todas">
+            <i class="bi bi-eye me-2"></i> Todas
+        </button>
+        <button class="btn btn-filter px-4 py-2 rounded-pill @(ViewBag.Filtro == "vigentes" ? "btn-dark active" : "btn-outline-secondary")" data-filtro="vigentes">
+            <i class="bi bi-check-circle me-2"></i> Solo vigentes
+        </button>
+    </div>
 
-                            @if (entrada.Estado != "Cancelada")
-                            {
+    <div id="entradasContainer">
+        @if (Model.Any())
+        {
+            <div class="row g-4" id="listaEntradas">
+                @foreach (var entrada in Model)
+                {
+                    <div class="col-md-6 col-lg-4 entrada-item" data-estado="@entrada.Estado">
+                        <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden @(entrada.Estado == "Cancelada" ? "opacity-75" : "")">
+                            <div class="card-header @(entrada.Estado == "Cancelada" ? "bg-secondary" : "bg-dark") text-white py-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">#@entrada.Id</span>
+                                    @if (entrada.Estado == "Cancelada")
+                                    {
+                                        <span class="badge bg-light text-dark">CANCELADA</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">CONFIRMADA</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold">@entrada.Evento?.Nombre</h5>
                                 <div class="mt-3">
-                                    <div class="d-flex justify-content-center p-3 bg-light rounded-3">
-                                        @if (!string.IsNullOrEmpty(entrada.CodigoQR))
-                                        {
-                                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@entrada.CodigoQR" alt="QR" style="width: 120px; height: 120px;">
-                                        }
-                                        <div class="ms-3">
-                                            <small class="text-muted">Código de verificación</small>
-                                            <code class="d-block">@entrada.CodigoQR</code>
-                                        </div>
+                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                        <i class="bi bi-calendar3 text-secondary"></i>
+                                        <span>@entrada.Evento?.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                        <i class="bi bi-geo-alt text-secondary"></i>
+                                        <span>@entrada.Evento?.Lugar</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                        <i class="bi bi-chair text-secondary"></i>
+                                        <span>Asiento: <strong>@entrada.Asiento</strong></span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <i class="bi bi-cash text-secondary"></i>
+                                        <span>Precio: <strong>$$@entrada.PrecioPagado.ToString("N0")</strong></span>
                                     </div>
                                 </div>
 
-                                <form method="post" action="/ClienteEntradas/Cancelar/@entrada.Id" class="mt-3" onsubmit="return confirm('¿Cancelar esta entrada? Recibirás reembolso (penalización 10%)')">
-                                    <button type="submit" class="btn btn-outline-danger w-100 rounded-3">
-                                        <i class="bi bi-x-circle me-2"></i> Cancelar compra
-                                    </button>
-                                </form>
-                            }
-                            else
-                            {
-                                <div class="alert alert-secondary text-center mt-3 mb-0">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    Esta entrada ya no es válida
-                                </div>
-                            }
-                        </div>
-                        <div class="card-footer bg-transparent border-0 pb-3">
-                            <button class="btn btn-outline-secondary w-100" onclick="window.print()">
-                                <i class="bi bi-download me-2"></i> Descargar / Imprimir
-                            </button>
+                                @if (entrada.Estado != "Cancelada")
+                                {
+                                    <div class="mt-3">
+                                        <div class="d-flex justify-content-center p-3 bg-light rounded-3">
+                                            @if (!string.IsNullOrEmpty(entrada.CodigoQR))
+                                            {
+                                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@entrada.CodigoQR" alt="QR" style="width: 120px; height: 120px;">
+                                            }
+                                            <div class="ms-3">
+                                                <small class="text-muted">Código de verificación</small>
+                                                <code class="d-block">@entrada.CodigoQR</code>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex gap-2 mt-3">
+                                        <form method="post" action="/ClienteEntradas/Cancelar/@entrada.Id" class="cancelar-form flex-grow-1" data-entrada-id="@entrada.Id" data-evento="@entrada.Evento?.Nombre" data-asiento="@entrada.Asiento" data-precio="@entrada.PrecioPagado">
+                                            <button type="button" class="btn btn-outline-danger w-100 rounded-3 btn-cancelar">
+                                                <i class="bi bi-x-circle me-2"></i> Cancelar
+                                            </button>
+                                        </form>
+
+                                        <a href="/ClienteEntradas/Imprimir/@entrada.Id" target="_blank" class="btn btn-outline-secondary rounded-3">
+                                            <i class="bi bi-download me-2"></i> Descargar / Imprimir
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-secondary text-center mt-3 mb-0">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Esta entrada ya no es válida
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="text-center py-5">
-            <i class="bi bi-ticket-perforated fs-1 text-muted"></i>
-            <p class="text-muted mt-3">No tienes entradas registradas</p>
-            <a href="/ClienteEventos" class="btn btn-dark rounded-3">Ver eventos</a>
-        </div>
-    }
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-ticket-perforated fs-1 text-muted"></i>
+                <p class="text-muted mt-3">No tienes entradas registradas</p>
+                <a href="/ClienteEventos" class="btn btn-dark rounded-3">Ver eventos</a>
+            </div>
+        }
+    </div>
 </div>
+
+<!-- Modal de confirmación para cancelar -->
+<div class="modal fade" id="modalConfirmarCancelar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
+                <h5 class="modal-title text-white">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Cancelar Entrada
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="mensajeCancelacion" class="mb-0"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i> No, mantener
+                </button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarCancelar">
+                    <i class="bi bi-check-circle me-2"></i> Sí, cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Variable para almacenar el formulario a enviar
+        let formularioACancelar = null;
+
+        // Configurar todos los botones de cancelar
+        document.querySelectorAll('.btn-cancelar').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const form = this.closest('.cancelar-form');
+                const evento = form.getAttribute('data-evento');
+
+                const mensaje = `
+                    <div class="text-center">
+                        <i class="bi bi-ticket-perforated fs-1 text-danger mb-3 d-block"></i>
+                        <p class="fw-bold mb-1">${evento}</p>
+                        <hr>
+                        <p class="mt-2 mb-0 fw-bold">¿Estás seguro de cancelar esta entrada?</p>
+                        <p class="small text-muted mt-1">Esta acción no se puede deshacer.</p>
+                    </div>
+                `;
+
+                document.getElementById('mensajeCancelacion').innerHTML = mensaje;
+                formularioACancelar = form;
+
+                const modal = new bootstrap.Modal(document.getElementById('modalConfirmarCancelar'));
+                modal.show();
+            });
+        });
+
+        // Confirmar cancelación
+        document.getElementById('btnConfirmarCancelar').addEventListener('click', function() {
+            if (formularioACancelar) {
+                formularioACancelar.submit();
+            }
+        });
+
+        // ========== FILTROS ==========
+        let filtroActual = 'todas';
+
+        function filtrarEntradas() {
+            const entradas = document.querySelectorAll('.entrada-item');
+            let contadorVigentes = 0;
+
+            entradas.forEach(entrada => {
+                const estado = entrada.getAttribute('data-estado');
+
+                if (filtroActual === 'todas') {
+                    entrada.style.display = '';
+                    if (estado !== 'Cancelada') {
+                        contadorVigentes++;
+                    }
+                } else if (filtroActual === 'vigentes') {
+                    if (estado === 'Cancelada') {
+                        entrada.style.display = 'none';
+                    } else {
+                        entrada.style.display = '';
+                        contadorVigentes++;
+                    }
+                }
+            });
+
+            // Mostrar mensaje si no hay resultados
+            const container = document.getElementById('entradasContainer');
+            let sinResultados = document.querySelector('.sin-resultados');
+
+            if (contadorVigentes === 0 && filtroActual === 'vigentes') {
+                if (!sinResultados) {
+                    const mensaje = document.createElement('div');
+                    mensaje.className = 'sin-resultados text-center py-5';
+                    mensaje.innerHTML = `
+                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                        <p class="text-muted mt-3">No tienes entradas vigentes</p>
+                        <a href="/ClienteEventos" class="btn btn-dark rounded-3">Ver eventos</a>
+                    `;
+                    container.appendChild(mensaje);
+                }
+            } else {
+                if (sinResultados) {
+                    sinResultados.remove();
+                }
+            }
+        }
+
+        // Configurar botones de filtro
+        document.querySelectorAll('.btn-filter').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const filtro = this.getAttribute('data-filtro');
+                filtroActual = filtro;
+
+                // Actualizar estilos de botones
+                document.querySelectorAll('.btn-filter').forEach(b => {
+                    b.classList.remove('btn-dark', 'active');
+                    b.classList.add('btn-outline-secondary');
+                });
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-dark', 'active');
+
+                filtrarEntradas();
+            });
+        });
+
+        // Inicializar filtro
+        filtrarEntradas();
+    </script>
+}

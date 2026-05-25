@@ -75,5 +75,28 @@ namespace EventosAPI.Controllers
             TempData["Success"] = "Entrada cancelada exitosamente";
             return RedirectToAction("Index");
         }
+
+        // GET: /ClienteEntradas/Imprimir/5
+        public async Task<IActionResult> Imprimir(int id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+                return RedirectToAction("Login", "AuthWeb");
+
+            var cliente = await _context.Clientes
+                .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+            if (cliente == null)
+                return NotFound();
+
+            var entrada = await _context.Entradas
+                .Include(e => e.Evento)
+                .FirstOrDefaultAsync(e => e.Id == id && e.ClienteId == cliente.Id);
+
+            if (entrada == null)
+                return NotFound();
+
+            return View(entrada);
+        }
     }
 }

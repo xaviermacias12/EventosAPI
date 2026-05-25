@@ -1,0 +1,97 @@
+﻿@model EventosAPI.Models.Entrada
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Ticket de Entrada</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: #f1f5f9;
+        }
+
+        .ticket {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .ticket-header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .ticket-body {
+            padding: 20px;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+            .qr-code img {
+                width: 150px;
+                height: 150px;
+            }
+    </style>
+</head>
+<body>
+    <div class="ticket">
+        <div class="ticket-header">
+            <i class="bi bi-ticket-perforated fs-1"></i>
+            <h3 class="mt-2">TICKET DE ENTRADA</h3>
+            <p class="mb-0 small opacity-75">ID: #@Model.Id</p>
+        </div>
+        <div class="ticket-body">
+            <h5 class="fw-bold text-center mb-3">@Model.Evento?.Nombre</h5>
+
+            <div class="mb-3">
+                <p><i class="bi bi-calendar3 me-2"></i> <strong>Fecha:</strong> @Model.Evento?.Fecha.ToString("dd/MM/yyyy HH:mm")</p>
+                <p><i class="bi bi-geo-alt me-2"></i> <strong>Lugar:</strong> @Model.Evento?.Lugar</p>
+                <p><i class="bi bi-chair me-2"></i> <strong>Asiento:</strong> @Model.Asiento</p>
+                <p><i class="bi bi-cash me-2"></i> <strong>Precio:</strong> $@Model.PrecioPagado.ToString("N0")</p>
+            </div>
+
+            <div class="qr-code">
+                @if (!string.IsNullOrEmpty(Model.CodigoQR))
+                {
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@Model.CodigoQR" alt="Código QR">
+                }
+                <p class="mt-2 mb-0"><small class="text-muted">Código: @Model.CodigoQR</small></p>
+            </div>
+
+            <hr>
+            <div class="text-center">
+                <small class="text-muted">Presenta este ticket en la entrada del evento</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4 no-print">
+        <button class="btn btn-dark" onclick="window.print()">Imprimir</button>
+        <button class="btn btn-secondary" onclick="window.close()">Cerrar</button>
+    </div>
+
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
